@@ -2,8 +2,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from wsr_evolution.domain.ports import FactReading
-from wsr_evolution.normalization.delivery import normalize_delivery
+from crystra_evolution.domain.ports import FactReading
+from crystra_evolution.normalization.delivery import normalize_delivery
 
 
 def summary(

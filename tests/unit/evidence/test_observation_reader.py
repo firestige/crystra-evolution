@@ -3,8 +3,8 @@ from typing import Any
 import httpx
 import pytest
 
-from wsr_evolution.application import UpstreamContractMismatch
-from wsr_evolution.evidence.client import EvidenceHttpClient
+from crystra_evolution.application import UpstreamContractMismatch
+from crystra_evolution.evidence.client import EvidenceHttpClient
 
 
 def fact_envelope() -> dict[str, Any]:

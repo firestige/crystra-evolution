@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from httpx import ASGITransport, AsyncClient, Response
 
-from wsr_evolution.api.models import (
+from crystra_evolution.api.models import (
     CatalogBinding,
     Coverage,
     EvaluationSelection,
@@ -16,13 +16,13 @@ from wsr_evolution.api.models import (
     SingleResponse,
     TaskPopulationEntry,
 )
-from wsr_evolution.app import create_app
-from wsr_evolution.application import (
+from crystra_evolution.app import create_app
+from crystra_evolution.application import (
     ResolutionBoundExceeded,
     UpstreamContractMismatch,
     UpstreamUnavailable,
 )
-from wsr_evolution.catalog import (
+from crystra_evolution.catalog import (
     CATALOG_COORDINATES,
     CATALOG_SEMANTIC_DIGEST,
     CATALOG_VERSION,

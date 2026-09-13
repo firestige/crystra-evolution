@@ -1,5 +1,5 @@
-from wsr_evolution.domain.models import DeliveryMetricUnit
-from wsr_evolution.normalization.task import normalize_task
+from crystra_evolution.domain.models import DeliveryMetricUnit
+from crystra_evolution.normalization.task import normalize_task
 
 
 def delivery(identity: str, outcome: str | None) -> DeliveryMetricUnit:

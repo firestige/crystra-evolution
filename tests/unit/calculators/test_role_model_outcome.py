@@ -1,5 +1,5 @@
-from wsr_evolution.calculators.role_model_task_outcome_rate import calculate
-from wsr_evolution.domain.models import RoleModelTaskUnit
+from crystra_evolution.calculators.role_model_task_outcome_rate import calculate
+from crystra_evolution.domain.models import RoleModelTaskUnit
 
 
 def task(index: int, outcome: str, *, model: str = "gpt-5") -> RoleModelTaskUnit:

@@ -6,9 +6,9 @@ ROOT = Path(__file__).parents[2]
 def test_source_image_bundles_python_service_and_exact_workflow_checker() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text()
 
-    assert "system-contracts/workflow-dsl-2-candidate" in dockerfile
-    assert "evolution-system/uv.lock" in dockerfile
-    assert 'CMD ["python", "-m", "wsr_evolution"]' in dockerfile
+    assert ".crystra-inputs/contracts/workflow-dsl-2-candidate" in dockerfile
+    assert "COPY pyproject.toml uv.lock README.md" in dockerfile
+    assert 'CMD ["python", "-m", "crystra_evolution"]' in dockerfile
     assert "EXPOSE 8000" in dockerfile
 
 
@@ -37,11 +37,11 @@ def test_release_image_has_exact_bases_identity_and_multi_platform_provenance() 
     assert ".config.Labels" not in workflow
 
 
-def test_release_image_builds_from_exact_superproject_authority() -> None:
+def test_release_image_builds_from_exact_component_and_contract() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release-candidate.yml").read_text()
 
-    assert "repository: firestige/workflow-self-recursive" in workflow
-    assert "submodules: recursive" in workflow
+    assert "config/development-contract.json" in workflow
+    assert "submodules: recursive" not in workflow
     assert "git -C evolution-system rev-parse HEAD" in workflow
     assert 'test "$(git -C evolution-system rev-parse HEAD)" = "$PRODUCT_COMMIT"' in workflow
     assert "--file evolution-system/Dockerfile" in workflow
@@ -51,8 +51,8 @@ def test_release_next_request_does_not_confuse_publisher_sha_with_product_commit
     workflow = (ROOT / ".github" / "workflows" / "release-candidate.yml").read_text()
 
     assert "release/request.json" in workflow
-    assert "PRODUCT_COMMIT: ${{ steps.request.outputs.product_commit }}" in workflow
-    assert "PRODUCT_COMMIT: ${{ github.sha }}" not in workflow
+    assert "PRODUCT_COMMIT: ${{ github.sha }}" in workflow
+    assert "steps.request.outputs.product_commit" not in workflow
     assert "workflow_dispatch:" not in workflow
     assert "workflow_call:" not in workflow
 
@@ -65,14 +65,14 @@ def test_candidate_persists_exact_qualification_for_later_promotion() -> None:
     assert "--prerelease" in workflow
     assert "actions/create-github-app-token@" in workflow
     assert "actions/create-github-app-token@v3" in workflow
-    assert "client-id: ${{ vars.WSR_RELEASE_CLIENT_ID }}" in workflow
+    assert "client-id: ${{ vars.CRYSTRA_RELEASE_CLIENT_ID }}" in workflow
     assert "app-id:" not in workflow
     assert "docker/setup-buildx-action@v4" in workflow
     assert "docker/setup-buildx-action@v3" not in workflow
     assert '"ociDigest":digest' in workflow
     assert '"platforms":["linux/amd64","linux/arm64"]' in workflow
     assert '"provenance":{"mode":"max","status":"PASS"}' in workflow
-    assert "release-publisher/release/validate_image_qualification.py" in workflow
+    assert "evolution-system/release/validate_image_qualification.py" in workflow
     assert '--provenance "$RUNNER_TEMP/provenance.json"' in workflow
     assert '--image-config "$RUNNER_TEMP/qualified-image-config.json"' in workflow
     assert ".SLSA.buildDefinition" not in workflow
@@ -94,7 +94,7 @@ def test_stable_promotion_retags_only_the_exact_qualified_candidate_digest() -> 
     assert "stable-qualification.json" in workflow
     assert "actions/create-github-app-token@" in workflow
     assert "actions/create-github-app-token@v3" in workflow
-    assert "client-id: ${{ vars.WSR_RELEASE_CLIENT_ID }}" in workflow
+    assert "client-id: ${{ vars.CRYSTRA_RELEASE_CLIENT_ID }}" in workflow
     assert "app-id:" not in workflow
     assert "docker/setup-buildx-action@v4" in workflow
     assert "docker/setup-buildx-action@v3" not in workflow
@@ -104,19 +104,12 @@ def test_stable_promotion_retags_only_the_exact_qualified_candidate_digest() -> 
     assert ".SLSA.buildDefinition" not in workflow
 
 
-def test_release_workflows_use_validator_from_exact_publisher_revision() -> None:
-    candidate = (ROOT / ".github" / "workflows" / "release-candidate.yml").read_text()
-    promote = (ROOT / ".github" / "workflows" / "release-promote.yml").read_text()
-
-    for workflow in (candidate, promote):
-        assert "repository: firestige/wsr-evolution" in workflow
-        assert "ref: ${{ github.workflow_sha }}" in workflow
-        assert "path: release-publisher" in workflow
-        assert "PUBLISHER_REVISION: ${{ github.workflow_sha }}" in workflow
-        assert 'git -C release-publisher rev-parse HEAD)" = "$PUBLISHER_REVISION"' in workflow
-        assert "python release-publisher/release/validate_image_qualification.py" in workflow
-
-    assert "python evolution-system/release/validate_image_qualification.py" not in candidate
-    assert "python release/validate_image_qualification.py" not in promote
-    assert 'git -C evolution-system rev-parse HEAD)" = "$PRODUCT_COMMIT"' in candidate
+def test_release_workflows_use_explicit_validator_revision() -> None:
+    candidate = (ROOT / ".github/workflows/release-candidate.yml").read_text()
+    promote = (ROOT / ".github/workflows/release-promote.yml").read_text()
+    assert "ref: ${{ github.sha }}" in candidate
+    assert "python evolution-system/release/validate_image_qualification.py" in candidate
+    assert "release-publisher" not in candidate
+    assert "ref: ${{ github.workflow_sha }}" in promote
+    assert "python release-publisher/release/validate_image_qualification.py" in promote
     assert 'git rev-parse HEAD)" = "$EXPECTED_COMMIT"' in promote

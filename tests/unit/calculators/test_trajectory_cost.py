@@ -1,5 +1,5 @@
-from wsr_evolution.calculators.trajectory_partial_cost import calculate
-from wsr_evolution.domain.models import ReportedUsageUnit
+from crystra_evolution.calculators.trajectory_partial_cost import calculate
+from crystra_evolution.domain.models import ReportedUsageUnit
 
 
 def usage(

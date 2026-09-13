@@ -1,8 +1,8 @@
-# evolution-system
+# Crystra Evolution
 
 English | [中文](README.zh-CN.md)
 
-evolution-system is workflow-self-recursive's stateless Metric Result service. It
+evolution-system is crystra-evolution's stateless Metric Result service. It
 resolves an `EvaluationSelection` against Evidence, binds the owner-approved
 Evaluation Catalog 2.0 review candidate, and returns a `ResolvedEvaluationContext` receipt together
 with authoritative Metric Results. Compare requests contain independent left and
@@ -44,7 +44,7 @@ per side, 20 pages per traversal, 100,000 Fact-plus-Trace records per side, and 
 is silently truncated. The 2.0 Catalog remains a review candidate, so
 **compatibility-breaking changes remain possible before publication.**
 
-Historical Workflow enrichment resolves only the exact Package and Snapshot coordinates already recorded by Evidence, using the configured ordered public GitHub sources. The reference coordinate is `firestige/wsr-workflow-package`. A validated in-process cache is keyed by the complete Package/Workflow/Snapshot/Role content coordinate; it is never Evidence authority and never substitutes stale, compatible, latest, branch, or local checkout content. Enrichment failure remains diagnostic and cannot rewrite a Metric Result.
+Historical Workflow enrichment resolves only the exact Package and Snapshot coordinates already recorded by Evidence, using the configured ordered public GitHub sources. The reference coordinate is `firestige/crystra-workflow-package`. A validated in-process cache is keyed by the complete Package/Workflow/Snapshot/Role content coordinate; it is never Evidence authority and never substitutes stale, compatible, latest, branch, or local checkout content. Enrichment failure remains diagnostic and cannot rewrite a Metric Result.
 
 ## Development
 
@@ -66,10 +66,10 @@ Build from the superproject root because the image binds both Evolution source a
 DSL 2.0 candidate checker:
 
 ```sh
-docker build -f evolution-system/Dockerfile -t wsr-evolution:local .
+docker build -f evolution-system/Dockerfile -t crystra-evolution:local .
 ```
 
-The process requires `WSR_EVOLUTION_CONFIG` to name a mounted closed JSON file. Start from
+The process requires `CRYSTRA_EVOLUTION_CONFIG` to name a mounted closed JSON file. Start from
 `deployment/evolution.example.json`, keep one to eight public GitHub sources in the order they should
 be tried, and lower the included safety limits only when needed. The file has no database or provider
 credential field. Container port `8000` is private; `GET /healthz` proves only local process liveness.
@@ -77,23 +77,23 @@ credential field. Container port `8000` is private; `GET /healthz` proves only l
 ## Get the source
 
 This repository is normally consumed as a submodule of
-[workflow-self-recursive](https://github.com/firestige/workflow-self-recursive):
+[crystra-evolution](https://github.com/firestige/crystra-evolution):
 
 ```sh
-git clone --recurse-submodules https://github.com/firestige/workflow-self-recursive.git
+git clone --recurse-submodules https://github.com/firestige/crystra-evolution.git
 ```
 
 To clone it standalone:
 
 ```sh
-git clone https://github.com/firestige/wsr-evolution.git
+git clone https://github.com/firestige/crystra-evolution.git
 ```
 
 ## Documentation
 
-- [Evolution System design](https://github.com/firestige/workflow-self-recursive/blob/main/docs/systems/evolution/evolution-system.md)
-- [Metric Catalog 2.0 review candidate](https://github.com/firestige/workflow-self-recursive/blob/main/docs/contracts/evaluation/metric-catalog-2-candidate.md)
-- [Evidence Query Contract](https://github.com/firestige/workflow-self-recursive/blob/main/docs/contracts/evidence-query/evidence-query.md)
+- [Evolution System design](https://github.com/firestige/crystra-evolution/blob/main/docs/systems/evolution/evolution-system.md)
+- [Metric Catalog 2.0 review candidate](https://github.com/firestige/crystra-evolution/blob/main/docs/contracts/evaluation/metric-catalog-2-candidate.md)
+- [Evidence Query Contract](https://github.com/firestige/crystra-evolution/blob/main/docs/contracts/evidence-query/evidence-query.md)
 
 ## License
 

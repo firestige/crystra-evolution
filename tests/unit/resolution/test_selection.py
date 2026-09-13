@@ -4,16 +4,16 @@ from datetime import UTC, datetime
 
 import pytest
 
-from wsr_evolution.api.models import EvaluationSelection
-from wsr_evolution.application import ResolutionBoundExceeded, UpstreamContractMismatch
-from wsr_evolution.domain.ports import (
+from crystra_evolution.api.models import EvaluationSelection
+from crystra_evolution.application import ResolutionBoundExceeded, UpstreamContractMismatch
+from crystra_evolution.domain.ports import (
     DeliveryManifestReading,
     ManifestWorkflow,
     TaskMembershipPage,
     TaskMembershipSummary,
 )
-from wsr_evolution.resolution.service import ResolutionLimits, SelectionPopulationResolver
-from wsr_evolution.workflow_sources.resolution import WorkflowResolution
+from crystra_evolution.resolution.service import ResolutionLimits, SelectionPopulationResolver
+from crystra_evolution.workflow_sources.resolution import WorkflowResolution
 
 AS_OF = datetime(2026, 8, 28, 1, tzinfo=UTC)
 

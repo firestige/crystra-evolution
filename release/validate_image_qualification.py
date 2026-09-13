@@ -28,7 +28,7 @@ PROVENANCE_PLATFORMS = {"linux/amd64", "linux/arm64"}
 PROVENANCE_BUILD_TYPE = (
     "https://github.com/moby/buildkit/blob/master/docs/attestations/slsa-definitions.md"
 )
-PROVENANCE_SOURCE = "https://github.com/firestige/workflow-self-recursive"
+PROVENANCE_SOURCE = "https://github.com/firestige/crystra-evolution"
 
 
 class QualificationError(RuntimeError):
@@ -38,33 +38,35 @@ class QualificationError(RuntimeError):
 def validate(
     value: dict[str, Any], *, candidate_tag: str, final_tag: str, commit: str
 ) -> dict[str, str]:
+    version = final_tag.removeprefix("crystra-evolution-v")
     authority = value.get("authority")
     provenance = value.get("provenance")
     sbom = value.get("sbom")
     digest = value.get("ociDigest")
     if (
         set(value) != TOP_LEVEL_KEYS
-        or value.get("schemaVersion") != "wsr.evolution-image-qualification@1.0.0"
-        or VERSION.fullmatch(final_tag) is None
-        or value.get("version") != final_tag
+        or value.get("schemaVersion") != "crystra.evolution-image-qualification@1.0.0"
+        or not final_tag.startswith("crystra-evolution-v")
+        or VERSION.fullmatch(version) is None
+        or value.get("version") != version
         or re.fullmatch(re.escape(final_tag) + r"-rc\.[1-9]\d*", candidate_tag) is None
         or value.get("candidateTag") != candidate_tag
         or COMMIT.fullmatch(commit) is None
         or value.get("commit") != commit
-        or value.get("source") != "https://github.com/firestige/wsr-evolution"
+        or value.get("source") != "https://github.com/firestige/crystra-evolution"
         or value.get("platforms") != ["linux/amd64", "linux/arm64"]
         or provenance != {"mode": "max", "status": "PASS"}
         or sbom != {"requested": True}
         or not isinstance(authority, dict)
         or set(authority) != {"repository", "revision"}
-        or authority.get("repository") != "firestige/workflow-self-recursive"
+        or authority.get("repository") != "firestige/crystra-evolution"
         or not isinstance(authority.get("revision"), str)
-        or COMMIT.fullmatch(authority["revision"]) is None
+        or authority["revision"] != commit
         or not isinstance(value.get("publisherRevision"), str)
         or COMMIT.fullmatch(value["publisherRevision"]) is None
         or not isinstance(digest, str)
         or DIGEST.fullmatch(digest) is None
-        or value.get("image") != f"ghcr.io/firestige/wsr-evolution:{candidate_tag}@{digest}"
+        or value.get("image") != f"ghcr.io/firestige/crystra-evolution:{candidate_tag}@{digest}"
     ):
         raise QualificationError("EVOLUTION_IMAGE_QUALIFICATION_INVALID")
     return {"authorityRevision": authority["revision"], "ociDigest": digest, "status": "PASS"}
@@ -83,7 +85,7 @@ def validate_provenance(
                 build["buildType"] != PROVENANCE_BUILD_TYPE
                 or arguments["vcs:source"] != PROVENANCE_SOURCE
                 or arguments["vcs:revision"] != authority_revision
-                or arguments["build-arg:WSR_RELEASE_REVISION"] != product_commit
+                or arguments["build-arg:CRYSTRA_RELEASE_REVISION"] != product_commit
             ):
                 raise QualificationError("EVOLUTION_IMAGE_PROVENANCE_INVALID")
     except (KeyError, TypeError) as error:
@@ -98,7 +100,7 @@ def validate_image_config(value: dict[str, Any], *, product_commit: str) -> None
             labels = value[platform]["config"]["Labels"]
             if (
                 labels["org.opencontainers.image.source"]
-                != "https://github.com/firestige/wsr-evolution"
+                != "https://github.com/firestige/crystra-evolution"
                 or labels["org.opencontainers.image.revision"] != product_commit
             ):
                 raise QualificationError("EVOLUTION_IMAGE_CONFIG_INVALID")

@@ -23,44 +23,55 @@ jobs:
       - name: Verify release trigger branch
         run: test "$GITHUB_REF_NAME" = "release/next"
 
-      - name: Resolve immutable release request
-        id: request
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api "repos/$GITHUB_REPOSITORY/contents/release/request.json?ref=$GITHUB_SHA" \
-            --jq .content | base64 --decode > "$RUNNER_TEMP/release-request.json"
-          CANDIDATE_TAG="$(jq -er .candidate_tag "$RUNNER_TEMP/release-request.json")"
-          AUTHORITY_REF="$(jq -er .authority_ref "$RUNNER_TEMP/release-request.json")"
-          PRODUCT_COMMIT="$(jq -er .product_commit "$RUNNER_TEMP/release-request.json")"
-          test -n "$CANDIDATE_TAG" && test -n "$AUTHORITY_REF" && test -n "$PRODUCT_COMMIT"
-          echo "candidate_tag=$CANDIDATE_TAG" >> "$GITHUB_OUTPUT"
-          echo "authority_ref=$AUTHORITY_REF" >> "$GITHUB_OUTPUT"
-          echo "product_commit=$PRODUCT_COMMIT" >> "$GITHUB_OUTPUT"
-
-      - name: Checkout exact superproject authority
+      - name: Checkout exact component source
         uses: actions/checkout@v6
         with:
-          repository: firestige/workflow-self-recursive
-          ref: ${{ steps.request.outputs.authority_ref }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
-          submodules: recursive
+          path: evolution-system
+      - name: Resolve immutable release request and Contract input
+        id: request
+        working-directory: evolution-system
+        run: |
+          echo "candidate_tag=$(jq -er .candidate_tag release/request.json)" >> "$GITHUB_OUTPUT"
+          echo "contract_repo=$(jq -er .repository config/development-contract.json)" >> "$GITHUB_OUTPUT"
+          echo "contract_ref=$(jq -er .revision config/development-contract.json)" >> "$GITHUB_OUTPUT"
+      - name: Checkout exact Contract dependency
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ steps.request.outputs.contract_repo }}
+          ref: ${{ steps.request.outputs.contract_ref }}
+          path: evolution-system/.crystra-inputs/contracts
+      - uses: astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9
+        with:
+          version: 0.11.28
+          python-version: "3.14"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.12.0
+      - run: npm --prefix evolution-system/.crystra-inputs/contracts/workflow-dsl-2-candidate ci --ignore-scripts
+      - name: Run component acceptance
+        working-directory: evolution-system
+        run: |
+          uv sync --locked
+          make check
+          git diff --exit-code HEAD
 
       - name: Verify exact Evolution product and candidate coordinate
         id: candidate
         env:
-          AUTHORITY_REF: ${{ steps.request.outputs.authority_ref }}
+          AUTHORITY_REF: ${{ github.sha }}
           GH_TOKEN: ${{ github.token }}
           CANDIDATE_TAG: ${{ steps.request.outputs.candidate_tag }}
-          PRODUCT_COMMIT: ${{ steps.request.outputs.product_commit }}
+          PRODUCT_COMMIT: ${{ github.sha }}
         run: |
           test "$(git -C evolution-system rev-parse HEAD)" = "$PRODUCT_COMMIT"
           case "$PRODUCT_COMMIT" in ????????????????????????????????????????) ;; *) exit 1 ;; esac
           case "$AUTHORITY_REF" in ????????????????????????????????????????) ;; *) exit 1 ;; esac
-          test "$(git rev-parse HEAD)" = "$AUTHORITY_REF"
+          test "$(git -C evolution-system rev-parse HEAD)" = "$AUTHORITY_REF"
           VERSION="$(python -c 'import tomllib; print(tomllib.load(open("evolution-system/pyproject.toml", "rb"))["project"]["version"])')"
           export CANDIDATE_TAG VERSION
-          python -c 'import os,re; assert re.fullmatch(re.escape(os.environ["VERSION"])+r"-rc\.[1-9]\d*",os.environ["CANDIDATE_TAG"])'
+          python -c 'import os,re; assert re.fullmatch(re.escape("crystra-evolution-v"+os.environ["VERSION"])+r"-rc\.[1-9]\d*",os.environ["CANDIDATE_TAG"])'
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           if gh release view "$CANDIDATE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             test "$(gh release view "$CANDIDATE_TAG" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)" = true
@@ -73,18 +84,6 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Checkout exact publisher tooling revision
-        uses: actions/checkout@v6
-        with:
-          repository: firestige/wsr-evolution
-          ref: ${{ github.workflow_sha }}
-          path: release-publisher
-
-      - name: Verify exact publisher tooling revision
-        env:
-          PUBLISHER_REVISION: ${{ github.workflow_sha }}
-        run: test "$(git -C release-publisher rev-parse HEAD)" = "$PUBLISHER_REVISION"
-
       - uses: docker/setup-buildx-action@v4
 
       - name: Resolve or publish immutable candidate image
@@ -92,10 +91,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CANDIDATE_TAG: ${{ steps.request.outputs.candidate_tag }}
-          PRODUCT_COMMIT: ${{ steps.request.outputs.product_commit }}
+          PRODUCT_COMMIT: ${{ github.sha }}
         run: |
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          IMAGE="ghcr.io/firestige/wsr-evolution:$CANDIDATE_TAG"
+          IMAGE="ghcr.io/firestige/crystra-evolution:$CANDIDATE_TAG"
           if docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' > "$RUNNER_TEMP/manifest.json" 2>/dev/null; then
             DIGEST="$(jq -er .digest "$RUNNER_TEMP/manifest.json")"
           else
@@ -104,38 +103,38 @@ jobs:
               --provenance=mode=max \
               --sbom=true \
               --tag "$IMAGE" \
-              --build-arg "WSR_RELEASE_REVISION=$PRODUCT_COMMIT" \
+              --build-arg "CRYSTRA_RELEASE_REVISION=$PRODUCT_COMMIT" \
               --metadata-file "$RUNNER_TEMP/image-metadata.json" \
               --file evolution-system/Dockerfile \
-              .
+              evolution-system
             DIGEST="$(jq -er '.["containerimage.digest"]' "$RUNNER_TEMP/image-metadata.json")"
           fi
           case "$DIGEST" in sha256:????????????????????????????????????????????????????????????????) ;; *) exit 1 ;; esac
-          docker buildx imagetools inspect "ghcr.io/firestige/wsr-evolution@$DIGEST" \
+          docker buildx imagetools inspect "ghcr.io/firestige/crystra-evolution@$DIGEST" \
             --format '{{json .Manifest}}' > "$RUNNER_TEMP/qualified-image-manifest.json"
-          docker buildx imagetools inspect "ghcr.io/firestige/wsr-evolution@$DIGEST" \
+          docker buildx imagetools inspect "ghcr.io/firestige/crystra-evolution@$DIGEST" \
             --format '{{json .Image}}' > "$RUNNER_TEMP/qualified-image-config.json"
           jq -e '[.manifests[] | select(.platform.os == "linux") | .platform.architecture] |
             (index("amd64") != null and index("arm64") != null)' \
             "$RUNNER_TEMP/qualified-image-manifest.json" >/dev/null
-          docker buildx imagetools inspect "ghcr.io/firestige/wsr-evolution@$DIGEST" \
+          docker buildx imagetools inspect "ghcr.io/firestige/crystra-evolution@$DIGEST" \
             --format '{{json .Provenance}}' > "$RUNNER_TEMP/provenance.json"
-          echo "coordinate=ghcr.io/firestige/wsr-evolution:$CANDIDATE_TAG@$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "coordinate=ghcr.io/firestige/crystra-evolution:$CANDIDATE_TAG@$DIGEST" >> "$GITHUB_OUTPUT"
 
       - name: Build durable candidate qualification metadata
         env:
-          AUTHORITY_REF: ${{ steps.request.outputs.authority_ref }}
+          AUTHORITY_REF: ${{ github.sha }}
           CANDIDATE_TAG: ${{ steps.request.outputs.candidate_tag }}
           DIGEST_COORDINATE: ${{ steps.image.outputs.coordinate }}
-          PRODUCT_COMMIT: ${{ steps.request.outputs.product_commit }}
+          PRODUCT_COMMIT: ${{ github.sha }}
           PUBLISHER_REVISION: ${{ github.workflow_sha }}
           VERSION: ${{ steps.candidate.outputs.version }}
         run: |
           export AUTHORITY_REF CANDIDATE_TAG DIGEST_COORDINATE PRODUCT_COMMIT PUBLISHER_REVISION VERSION
-          python -c 'import json,os,pathlib; coordinate=os.environ["DIGEST_COORDINATE"]; digest=coordinate.rsplit("@",1)[1]; q={"schemaVersion":"wsr.evolution-image-qualification@1.0.0","candidateTag":os.environ["CANDIDATE_TAG"],"version":os.environ["VERSION"],"commit":os.environ["PRODUCT_COMMIT"],"authority":{"repository":"firestige/workflow-self-recursive","revision":os.environ["AUTHORITY_REF"]},"publisherRevision":os.environ["PUBLISHER_REVISION"],"image":coordinate,"ociDigest":digest,"source":"https://github.com/firestige/wsr-evolution","platforms":["linux/amd64","linux/arm64"],"provenance":{"mode":"max","status":"PASS"},"sbom":{"requested":True}}; pathlib.Path(os.environ["RUNNER_TEMP"],"release-qualification.json").write_text(json.dumps(q,indent=2)+"\n")'
-          python release-publisher/release/validate_image_qualification.py \
+          python -c 'import json,os,pathlib; coordinate=os.environ["DIGEST_COORDINATE"]; digest=coordinate.rsplit("@",1)[1]; q={"schemaVersion":"crystra.evolution-image-qualification@1.0.0","candidateTag":os.environ["CANDIDATE_TAG"],"version":os.environ["VERSION"],"commit":os.environ["PRODUCT_COMMIT"],"authority":{"repository":"firestige/crystra-evolution","revision":os.environ["AUTHORITY_REF"]},"publisherRevision":os.environ["PUBLISHER_REVISION"],"image":coordinate,"ociDigest":digest,"source":"https://github.com/firestige/crystra-evolution","platforms":["linux/amd64","linux/arm64"],"provenance":{"mode":"max","status":"PASS"},"sbom":{"requested":True}}; pathlib.Path(os.environ["RUNNER_TEMP"],"release-qualification.json").write_text(json.dumps(q,indent=2)+"\n")'
+          python evolution-system/release/validate_image_qualification.py \
             "$RUNNER_TEMP/release-qualification.json" \
-            --candidate-tag "$CANDIDATE_TAG" --final-tag "$VERSION" --commit "$PRODUCT_COMMIT" \
+            --candidate-tag "$CANDIDATE_TAG" --final-tag "crystra-evolution-v$VERSION" --commit "$PRODUCT_COMMIT" \
             --provenance "$RUNNER_TEMP/provenance.json" \
             --image-config "$RUNNER_TEMP/qualified-image-config.json" >/dev/null
 
@@ -143,10 +142,10 @@ jobs:
         id: release-app-token
         uses: actions/create-github-app-token@v3
         with:
-          client-id: ${{ vars.WSR_RELEASE_CLIENT_ID }}
-          private-key: ${{ secrets.WSR_RELEASE_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.CRYSTRA_RELEASE_CLIENT_ID }}
+          private-key: ${{ secrets.CRYSTRA_RELEASE_APP_PRIVATE_KEY }}
           owner: firestige
-          repositories: wsr-evolution
+          repositories: crystra-evolution
           permission-contents: write
           permission-workflows: write
 
@@ -154,7 +153,7 @@ jobs:
         env:
           CANDIDATE_TAG: ${{ steps.request.outputs.candidate_tag }}
           GH_TOKEN: ${{ steps.release-app-token.outputs.token }}
-          PRODUCT_COMMIT: ${{ steps.request.outputs.product_commit }}
+          PRODUCT_COMMIT: ${{ github.sha }}
           RELEASE_EXISTS: ${{ steps.candidate.outputs.exists }}
         run: |
           if test "$RELEASE_EXISTS" != true; then

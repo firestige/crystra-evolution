@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from wsr_evolution.calculators.protocol import Calculator
-from wsr_evolution.domain.models import NormalizedMetricInput, NormalizedValue
-from wsr_evolution.domain.ports import (
+from crystra_evolution.calculators.protocol import Calculator
+from crystra_evolution.domain.models import NormalizedMetricInput, NormalizedValue
+from crystra_evolution.domain.ports import (
     EvidenceTaskReader,
     TaskMembershipPage,
     TaskMembershipSummary,
@@ -18,7 +18,7 @@ from wsr_evolution.domain.ports import (
 )
 
 ROOT = Path(__file__).parents[2]
-PACKAGE = ROOT / "src" / "wsr_evolution"
+PACKAGE = ROOT / "src" / "crystra_evolution"
 SLOT_MODULES = tuple(
     path
     for path in (PACKAGE / "calculators").glob("*.py")
@@ -53,16 +53,16 @@ def test_calculator_slots_do_not_import_transport_storage_or_each_other() -> Non
         "requests",
         "sqlalchemy",
         "psycopg",
-        "wsr_evolution.app",
-        "wsr_evolution.application",
-        "wsr_evolution.domain.ports",
+        "crystra_evolution.app",
+        "crystra_evolution.application",
+        "crystra_evolution.domain.ports",
     )
-    slot_names = {f"wsr_evolution.calculators.{path.stem}" for path in SLOT_MODULES}
+    slot_names = {f"crystra_evolution.calculators.{path.stem}" for path in SLOT_MODULES}
 
     for path in SLOT_MODULES:
         imports = imported_modules(path)
         assert not any(item.startswith(forbidden_prefixes) for item in imports)
-        assert imports.isdisjoint(slot_names - {f"wsr_evolution.calculators.{path.stem}"})
+        assert imports.isdisjoint(slot_names - {f"crystra_evolution.calculators.{path.stem}"})
 
 
 def test_normalized_calculator_input_is_immutable_and_transport_free() -> None:
@@ -116,7 +116,7 @@ def test_package_imports_without_database_environment(monkeypatch: pytest.Monkey
         if "DATABASE" in name or name.startswith("PG"):
             monkeypatch.delenv(name, raising=False)
 
-    assert importlib.import_module("wsr_evolution.app") is not None
+    assert importlib.import_module("crystra_evolution.app") is not None
 
 
 def test_api_and_domain_layers_do_not_import_concrete_calculators() -> None:
@@ -126,7 +126,7 @@ def test_api_and_domain_layers_do_not_import_concrete_calculators() -> None:
             continue
         imports = imported_modules(path)
         assert not any(
-            module.removeprefix("wsr_evolution.calculators.") in concrete
+            module.removeprefix("crystra_evolution.calculators.") in concrete
             for module in imports
-            if module.startswith("wsr_evolution.calculators.")
+            if module.startswith("crystra_evolution.calculators.")
         )

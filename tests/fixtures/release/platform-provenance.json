@@ -8,9 +8,9 @@
             "root": {
               "request": {
                 "args": {
-                  "build-arg:WSR_RELEASE_REVISION": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                  "vcs:source": "https://github.com/firestige/workflow-self-recursive",
-                  "vcs:revision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                  "build-arg:CRYSTRA_RELEASE_REVISION": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "vcs:source": "https://github.com/firestige/crystra-evolution",
+                  "vcs:revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                 }
               }
             }
@@ -28,9 +28,9 @@
             "root": {
               "request": {
                 "args": {
-                  "build-arg:WSR_RELEASE_REVISION": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                  "vcs:source": "https://github.com/firestige/workflow-self-recursive",
-                  "vcs:revision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                  "build-arg:CRYSTRA_RELEASE_REVISION": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "vcs:source": "https://github.com/firestige/crystra-evolution",
+                  "vcs:revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                 }
               }
             }

@@ -1,5 +1,5 @@
-from wsr_evolution.calculators.task_cohort_comparison_eligibility import calculate
-from wsr_evolution.domain.models import TaskMetricUnit
+from crystra_evolution.calculators.task_cohort_comparison_eligibility import calculate
+from crystra_evolution.domain.models import TaskMetricUnit
 
 
 def task(index: int, *, state: str, covered: bool = True) -> TaskMetricUnit:

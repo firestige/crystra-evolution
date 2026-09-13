@@ -1,8 +1,8 @@
-# evolution-system
+# Crystra Evolution
 
 [English](README.md) | 中文
 
-evolution-system 是 workflow-self-recursive 的无状态 Metric Result 服务。它把
+evolution-system 是 Crystra 的无状态 Metric Result 服务。它把
 `EvaluationSelection` 解析到 Evidence，绑定 owner 已批准的 Evaluation Catalog 2.0 评审候选，并返回
 `ResolvedEvaluationContext` receipt 与权威 Metric Results。compare 请求分别携带左右
 selection；两侧结果和所有兼容 delta 均由 Evolution 计算。
@@ -35,7 +35,7 @@ Resolution safety limit 全部可配置。默认每 side 500 个 unique Delivery
 页、每 side 100,000 条 Fact+Trace record、side deadline 120 秒。超过边界会显式令该 side
 失败，绝不静默截断。2.0 Catalog 仍是 review candidate，**正式发布前仍可能发生破坏兼容性的变更。**
 
-历史 Workflow enrichment 只解析 Evidence 已记录的确定 Package 与 Snapshot 坐标，并按配置顺序读取 public GitHub source；参考坐标为 `firestige/wsr-workflow-package`。通过校验的进程内 cache 以完整 Package/Workflow/Snapshot/Role 内容坐标为 key；它不是 Evidence authority，也不会用 stale、compatible、latest、branch 或本地 checkout 内容替代。Enrichment 失败只形成诊断，不能改写 Metric Result。
+历史 Workflow enrichment 只解析 Evidence 已记录的确定 Package 与 Snapshot 坐标，并按配置顺序读取 public GitHub source；参考坐标为 `firestige/crystra-workflow-package`。通过校验的进程内 cache 以完整 Package/Workflow/Snapshot/Role 内容坐标为 key；它不是 Evidence authority，也不会用 stale、compatible、latest、branch 或本地 checkout 内容替代。Enrichment 失败只形成诊断，不能改写 Metric Result。
 
 ## 开发
 
@@ -57,34 +57,34 @@ Image 同时绑定 Evolution source 与 pinned Workflow DSL 2.0 candidate checke
 superproject root 构建：
 
 ```sh
-docker build -f evolution-system/Dockerfile -t wsr-evolution:local .
+docker build -f evolution-system/Dockerfile -t crystra-evolution:local .
 ```
 
-Process 要求 `WSR_EVOLUTION_CONFIG` 指向 mounted closed JSON file。以
+Process 要求 `CRYSTRA_EVOLUTION_CONFIG` 指向 mounted closed JSON file。以
 `deployment/evolution.example.json` 为起点，按期望尝试顺序配置一到八个 public GitHub
 source；需要时只能降低其中的 safety limits。该文件没有 database/provider credential 字段。
 Container port `8000` 只在私网使用；`GET /healthz` 仅证明 local process liveness。
 
 ## 获取源码
 
-本仓库通常作为 [workflow-self-recursive](https://github.com/firestige/workflow-self-recursive)
+本仓库通常作为 [crystra-evolution](https://github.com/firestige/crystra-evolution)
 的 submodule 使用：
 
 ```sh
-git clone --recurse-submodules https://github.com/firestige/workflow-self-recursive.git
+git clone --recurse-submodules https://github.com/firestige/crystra-evolution.git
 ```
 
 单独克隆：
 
 ```sh
-git clone https://github.com/firestige/wsr-evolution.git
+git clone https://github.com/firestige/crystra-evolution.git
 ```
 
 ## 文档
 
-- [Evolution System 设计](https://github.com/firestige/workflow-self-recursive/blob/main/docs/systems/evolution/evolution-system.zh-CN.md)
-- [Metric Catalog 2.0 评审候选](https://github.com/firestige/workflow-self-recursive/blob/main/docs/contracts/evaluation/metric-catalog-2-candidate.zh-CN.md)
-- [Evidence Query Contract](https://github.com/firestige/workflow-self-recursive/blob/main/docs/contracts/evidence-query/evidence-query.zh-CN.md)
+- [Evolution System 设计](https://github.com/firestige/crystra-evolution/blob/main/docs/systems/evolution/evolution-system.zh-CN.md)
+- [Metric Catalog 2.0 评审候选](https://github.com/firestige/crystra-evolution/blob/main/docs/contracts/evaluation/metric-catalog-2-candidate.zh-CN.md)
+- [Evidence Query Contract](https://github.com/firestige/crystra-evolution/blob/main/docs/contracts/evidence-query/evidence-query.zh-CN.md)
 
 ## License
 

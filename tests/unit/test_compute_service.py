@@ -5,7 +5,7 @@ from typing import Literal, cast
 
 import pytest
 
-from wsr_evolution.api.models import (
+from crystra_evolution.api.models import (
     CompareRequest,
     CompareResponse,
     EvaluationSelection,
@@ -18,21 +18,21 @@ from wsr_evolution.api.models import (
     WorkflowResolutionAttempt,
     WorkflowResolutionEntry,
 )
-from wsr_evolution.application import (
+from crystra_evolution.application import (
     ResolutionBoundExceeded,
     UpstreamContractMismatch,
     UpstreamUnavailable,
 )
-from wsr_evolution.catalog import CATALOG_COORDINATES, CATALOG_SEMANTIC_DIGEST
-from wsr_evolution.compute import EvolutionComputeService
-from wsr_evolution.domain.models import ReportedUsageUnit, RoleTemplateDeliveryUnit
-from wsr_evolution.domain.ports import (
+from crystra_evolution.catalog import CATALOG_COORDINATES, CATALOG_SEMANTIC_DIGEST
+from crystra_evolution.compute import EvolutionComputeService
+from crystra_evolution.domain.models import ReportedUsageUnit, RoleTemplateDeliveryUnit
+from crystra_evolution.domain.ports import (
     FactReading,
     FactRelationship,
     FactRelationshipEndpoint,
     TraceNodeReading,
 )
-from wsr_evolution.resolution.service import (
+from crystra_evolution.resolution.service import (
     ResolutionLimits,
     ResolvedDeliveryObservation,
     ResolvedSelectionPopulation,

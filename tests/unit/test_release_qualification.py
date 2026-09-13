@@ -12,25 +12,25 @@ VALIDATOR = ROOT / "release" / "validate_image_qualification.py"
 PROVENANCE = ROOT / "tests" / "fixtures" / "release" / "platform-provenance.json"
 IMAGE_CONFIG = ROOT / "tests" / "fixtures" / "release" / "platform-image.json"
 COMMIT = "a" * 40
-AUTHORITY = "b" * 40
+AUTHORITY = COMMIT
 PUBLISHER = "c" * 40
 DIGEST = "sha256:" + "d" * 64
 
 
 def qualification() -> dict[str, object]:
     return {
-        "schemaVersion": "wsr.evolution-image-qualification@1.0.0",
-        "candidateTag": "0.1.0-rc.1",
+        "schemaVersion": "crystra.evolution-image-qualification@1.0.0",
+        "candidateTag": "crystra-evolution-v0.1.0-rc.1",
         "version": "0.1.0",
         "commit": COMMIT,
         "authority": {
-            "repository": "firestige/workflow-self-recursive",
+            "repository": "firestige/crystra-evolution",
             "revision": AUTHORITY,
         },
         "publisherRevision": PUBLISHER,
-        "image": f"ghcr.io/firestige/wsr-evolution:0.1.0-rc.1@{DIGEST}",
+        "image": f"ghcr.io/firestige/crystra-evolution:crystra-evolution-v0.1.0-rc.1@{DIGEST}",
         "ociDigest": DIGEST,
-        "source": "https://github.com/firestige/wsr-evolution",
+        "source": "https://github.com/firestige/crystra-evolution",
         "platforms": ["linux/amd64", "linux/arm64"],
         "provenance": {"mode": "max", "status": "PASS"},
         "sbom": {"requested": True},
@@ -50,9 +50,9 @@ def invoke(
         str(VALIDATOR),
         str(source),
         "--candidate-tag",
-        "0.1.0-rc.1",
+        "crystra-evolution-v0.1.0-rc.1",
         "--final-tag",
-        "0.1.0",
+        "crystra-evolution-v0.1.0",
         "--commit",
         COMMIT,
     ]
@@ -86,7 +86,7 @@ def test_candidate_qualification_rejects_any_open_or_mutable_input(tmp_path: Pat
     mutations: dict[str, Callable[[dict[str, object]], None]] = {
         "unknown-key": lambda value: value.update({"extra": True}),
         "mutable-image": lambda value: value.update(
-            {"image": "ghcr.io/firestige/wsr-evolution:latest"}
+            {"image": "ghcr.io/firestige/crystra-evolution:latest"}
         ),
         "wrong-platforms": lambda value: value.update({"platforms": ["linux/amd64"]}),
         "unqualified-provenance": lambda value: value.update(
@@ -151,7 +151,7 @@ def test_platform_keyed_provenance_rejects_missing_or_mismatched_attestation(
         )
 
     def mismatch_product(value: dict[str, object]) -> None:
-        provenance_arguments(value, "linux/amd64")["build-arg:WSR_RELEASE_REVISION"] = "e" * 40
+        provenance_arguments(value, "linux/amd64")["build-arg:CRYSTRA_RELEASE_REVISION"] = "e" * 40
 
     mutations: dict[str, Callable[[dict[str, object]], None]] = {
         "missing-arm64": remove_arm64,

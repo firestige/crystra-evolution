@@ -1,9 +1,9 @@
 from fractions import Fraction
 
-from wsr_evolution.calculators.delivery_cycle_time_ms import calculate as cycle_time
-from wsr_evolution.calculators.delivery_stage_reach import calculate as stage_reach
-from wsr_evolution.calculators.delivery_terminal_outcome_rate import calculate as outcome_rate
-from wsr_evolution.domain.models import DeliveryMetricUnit
+from crystra_evolution.calculators.delivery_cycle_time_ms import calculate as cycle_time
+from crystra_evolution.calculators.delivery_stage_reach import calculate as stage_reach
+from crystra_evolution.calculators.delivery_terminal_outcome_rate import calculate as outcome_rate
+from crystra_evolution.domain.models import DeliveryMetricUnit
 
 
 def unit(

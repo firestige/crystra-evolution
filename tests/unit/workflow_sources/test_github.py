@@ -6,8 +6,8 @@ from hashlib import sha256
 import httpx
 import pytest
 
-from wsr_evolution.workflow_sources.github import GitHubWorkflowSource
-from wsr_evolution.workflow_sources.resolution import (
+from crystra_evolution.workflow_sources.github import GitHubWorkflowSource
+from crystra_evolution.workflow_sources.resolution import (
     SourceFailure,
     WorkflowCandidate,
     WorkflowSourceConfig,
@@ -58,8 +58,8 @@ async def test_github_source_fetches_exact_scoped_release_and_checks_bytes() -> 
     provenance = {
         "schemaVersion": "workflow-package.provenance@1.0.0",
         "subject": {"name": archive_name, "sha256": archive_digest},
-        "source": {"repository": "firestige/wsr-workflow-package", "revision": "c" * 40},
-        "contract": {"repository": "firestige/wsr-contracts", "revision": "d" * 40},
+        "source": {"repository": "firestige/crystra-workflow-package", "revision": "c" * 40},
+        "contract": {"repository": "firestige/crystra-contracts", "revision": "d" * 40},
         "builder": {"workflow": ".github/workflows/release-candidate.yml"},
     }
     provenance_bytes = (json.dumps(provenance, separators=(",", ":")) + "\n").encode()
@@ -112,7 +112,7 @@ async def test_github_source_fetches_exact_scoped_release_and_checks_bytes() -> 
                         "sha256": "sha256:" + sha256(provenance_bytes).hexdigest(),
                     },
                     "contract": {
-                        "repository": "firestige/wsr-contracts",
+                        "repository": "firestige/crystra-contracts",
                         "revision": "d" * 40,
                         "minVersion": "1.1.0",
                         "maxVersion": "1.1.0",
@@ -130,7 +130,9 @@ async def test_github_source_fetches_exact_scoped_release_and_checks_bytes() -> 
     validator = ValidatorStub()
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as transport:
         source = GitHubWorkflowSource(
-            WorkflowSourceConfig("official", "firestige/wsr-workflow-package"), transport, validator
+            WorkflowSourceConfig("official", "firestige/crystra-workflow-package"),
+            transport,
+            validator,
         )
         result = await source.fetch_exact(
             package_name="implementation", exact_version="2.0.0", timeout_seconds=3.0
@@ -139,7 +141,7 @@ async def test_github_source_fetches_exact_scoped_release_and_checks_bytes() -> 
     assert result.archive_digest == archive_digest
     assert validator.calls == [(archive, archive_digest, "implementation", "2.0.0")]
     assert calls[0] == (
-        "https://api.github.com/repos/firestige/wsr-workflow-package/releases?per_page=100&page=1"
+        "https://api.github.com/repos/firestige/crystra-workflow-package/releases?per_page=100&page=1"
     )
 
 
@@ -281,7 +283,7 @@ async def test_github_source_resolves_exact_historical_aggregate_release() -> No
     validator = ValidatorStub()
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as transport:
         source = GitHubWorkflowSource(
-            WorkflowSourceConfig("official", "firestige/wsr-workflow-package"),
+            WorkflowSourceConfig("official", "firestige/crystra-workflow-package"),
             transport,
             validator,
         )
@@ -303,7 +305,7 @@ async def test_github_source_distinguishes_missing_repository_from_outage(
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as transport:
         source = GitHubWorkflowSource(
-            WorkflowSourceConfig("official", "firestige/wsr-workflow-package"),
+            WorkflowSourceConfig("official", "firestige/crystra-workflow-package"),
             transport,
             ValidatorStub(),
         )

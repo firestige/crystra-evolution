@@ -4,7 +4,7 @@
   "workflow_sources": [
     {
       "source_id": "official",
-      "repository": "firestige/wsr-workflow-package"
+      "repository": "firestige/crystra-workflow-package"
     }
   ],
   "limits": {

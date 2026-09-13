@@ -4,7 +4,7 @@ from typing import Literal, cast
 import pytest
 from pydantic import ValidationError
 
-from wsr_evolution.api.models import (
+from crystra_evolution.api.models import (
     CatalogBinding,
     CompareResponse,
     Coverage,
@@ -24,7 +24,7 @@ from wsr_evolution.api.models import (
     WorkflowResolutionAttempt,
     WorkflowResolutionEntry,
 )
-from wsr_evolution.catalog import (
+from crystra_evolution.catalog import (
     CATALOG_COORDINATES,
     CATALOG_SEMANTIC_DIGEST,
     CATALOG_VERSION,

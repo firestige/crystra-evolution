@@ -4,12 +4,12 @@ from dataclasses import replace
 
 import pytest
 
-from wsr_evolution.domain.ports import (
+from crystra_evolution.domain.ports import (
     DeliveryManifestReading,
     ManifestRoleBinding,
     ManifestWorkflow,
 )
-from wsr_evolution.workflow_sources.resolution import (
+from crystra_evolution.workflow_sources.resolution import (
     SourceFailure,
     WorkflowCandidate,
     WorkflowCandidateRole,
@@ -164,7 +164,7 @@ async def test_validated_cache_is_keyed_by_exact_content_and_never_substitutes()
     source = StubSource([exact, exact, exact])
     resolver = WorkflowSourceResolver(
         WorkflowResolutionConfig(
-            sources=(WorkflowSourceConfig("official", "firestige/wsr-workflow-package"),)
+            sources=(WorkflowSourceConfig("official", "firestige/crystra-workflow-package"),)
         ),
         {"official": source},
     )

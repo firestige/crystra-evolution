@@ -2,14 +2,14 @@ from datetime import UTC, datetime
 
 import pytest
 
-from wsr_evolution.application import ResolutionBoundExceeded, UpstreamContractMismatch
-from wsr_evolution.domain.ports import (
+from crystra_evolution.application import ResolutionBoundExceeded, UpstreamContractMismatch
+from crystra_evolution.domain.ports import (
     FactPage,
     FactReading,
     TraceNodeReading,
     TracePage,
 )
-from wsr_evolution.resolution.service import DeliveryObservationResolver, ResolutionLimits
+from crystra_evolution.resolution.service import DeliveryObservationResolver, ResolutionLimits
 
 
 def fact(fact_id: str) -> FactReading:

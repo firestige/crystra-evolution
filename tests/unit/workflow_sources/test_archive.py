@@ -7,15 +7,12 @@ from subprocess import CompletedProcess
 
 import pytest
 
-from wsr_evolution.workflow_sources.archive import ExactWorkflowArchiveValidator
-from wsr_evolution.workflow_sources.resolution import SourceFailure
+from crystra_evolution.workflow_sources.archive import ExactWorkflowArchiveValidator
+from crystra_evolution.workflow_sources.resolution import SourceFailure
 
-SUPERPROJECT = Path(__file__).parents[4]
-CHECKER = SUPERPROJECT / "system-contracts/workflow-dsl-2-candidate"
+REPOSITORY = Path(__file__).parents[3]
+CHECKER = REPOSITORY / ".crystra-inputs/contracts/workflow-dsl-2-candidate"
 MINIMAL = CHECKER / "generated/examples/minimal"
-pytestmark = pytest.mark.skipif(
-    not MINIMAL.exists(), reason="superproject contract checkout absent"
-)
 
 
 def archive_minimal(tmp_path: Path) -> bytes:
@@ -52,7 +49,7 @@ async def test_checker_work_does_not_block_the_asgi_event_loop(
         time.sleep(0.05)
         return CompletedProcess(args=[], returncode=1, stdout=b"", stderr=b"")
 
-    monkeypatch.setattr("wsr_evolution.workflow_sources.archive.subprocess.run", slow_rejection)
+    monkeypatch.setattr("crystra_evolution.workflow_sources.archive.subprocess.run", slow_rejection)
     validation = asyncio.create_task(
         ExactWorkflowArchiveValidator(CHECKER).validate(
             archive=archive,

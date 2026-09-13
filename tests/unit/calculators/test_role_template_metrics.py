@@ -1,8 +1,8 @@
-from wsr_evolution.calculators.role_template_rework_rate import calculate as rework
-from wsr_evolution.calculators.role_template_trajectory_partial_cost import (
+from crystra_evolution.calculators.role_template_rework_rate import calculate as rework
+from crystra_evolution.calculators.role_template_trajectory_partial_cost import (
     calculate as template_cost,
 )
-from wsr_evolution.domain.models import RoleTemplateDeliveryUnit, RoleTemplateUsageUnit
+from crystra_evolution.domain.models import RoleTemplateDeliveryUnit, RoleTemplateUsageUnit
 
 
 def delivery(index: int, repaired: bool | None = False) -> RoleTemplateDeliveryUnit:

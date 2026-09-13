@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-from wsr_evolution.domain.ports import FactReading
-from wsr_evolution.normalization.usage import normalize_reported_usage
+from crystra_evolution.domain.ports import FactReading
+from crystra_evolution.normalization.usage import normalize_reported_usage
 
 
 def usage(

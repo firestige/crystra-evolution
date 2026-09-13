@@ -5,8 +5,8 @@ from hashlib import sha256
 import httpx
 import pytest
 
-from wsr_evolution.application import UpstreamContractMismatch, UpstreamUnavailable
-from wsr_evolution.evidence.client import EvidenceHttpClient
+from crystra_evolution.application import UpstreamContractMismatch, UpstreamUnavailable
+from crystra_evolution.evidence.client import EvidenceHttpClient
 
 
 def task_response(*, revision: str = "1.0.0") -> dict[str, object]:

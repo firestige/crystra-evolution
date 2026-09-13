@@ -1,7 +1,7 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from wsr_evolution.app import create_app
+from crystra_evolution.app import create_app
 
 
 class StubCompute:

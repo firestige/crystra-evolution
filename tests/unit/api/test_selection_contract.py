@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from wsr_evolution.api.models import CompareRequest, SingleRequest
+from crystra_evolution.api.models import CompareRequest, SingleRequest
 
 
 def test_single_selection_is_canonical_task_population() -> None:

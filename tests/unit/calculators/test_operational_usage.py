@@ -1,8 +1,8 @@
-from wsr_evolution.calculators.operational_attributable_cost import calculate as cost
-from wsr_evolution.calculators.operational_usage_availability import (
+from crystra_evolution.calculators.operational_attributable_cost import calculate as cost
+from crystra_evolution.calculators.operational_usage_availability import (
     calculate as availability,
 )
-from wsr_evolution.domain.models import OperationalCallUnit, OperationalUsageUnit
+from crystra_evolution.domain.models import OperationalCallUnit, OperationalUsageUnit
 
 
 def call(index: int) -> OperationalCallUnit:

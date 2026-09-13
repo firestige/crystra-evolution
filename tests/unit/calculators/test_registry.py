@@ -1,7 +1,7 @@
 import importlib
 
-from wsr_evolution.calculators.registry import CALCULATOR_SLOTS
-from wsr_evolution.catalog import CATALOG_COORDINATES
+from crystra_evolution.calculators.registry import CALCULATOR_SLOTS
+from crystra_evolution.catalog import CATALOG_COORDINATES
 
 EXPECTED_COORDINATES = (
     "role-template-rework-rate@2.0.0",

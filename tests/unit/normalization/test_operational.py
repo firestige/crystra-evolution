@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-from wsr_evolution.domain.ports import TraceNodeReading
-from wsr_evolution.normalization.operational import normalize_model_calls
+from crystra_evolution.domain.ports import TraceNodeReading
+from crystra_evolution.normalization.operational import normalize_model_calls
 
 
 def node(

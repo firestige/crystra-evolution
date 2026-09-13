@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from wsr_evolution.runtime import RuntimeConfiguration, load_configuration
+from crystra_evolution.runtime import RuntimeConfiguration, load_configuration
 
 
 def valid_configuration() -> dict[str, object]:
@@ -12,7 +12,7 @@ def valid_configuration() -> dict[str, object]:
         "schema_version": "evolution.runtime@1.0.0",
         "evidence_base_url": "http://evidence:4318",
         "workflow_sources": [
-            {"source_id": "official", "repository": "firestige/wsr-workflow-package"}
+            {"source_id": "official", "repository": "firestige/crystra-workflow-package"}
         ],
         "limits": {
             "max_deliveries_per_side": 500,
@@ -78,11 +78,21 @@ def test_safety_limit_overrides_may_not_raise_published_maxima() -> None:
 def test_load_configuration_requires_an_explicit_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.delenv("WSR_EVOLUTION_CONFIG", raising=False)
-    with pytest.raises(RuntimeError, match="WSR_EVOLUTION_CONFIG"):
+    monkeypatch.delenv("CRYSTRA_EVOLUTION_CONFIG", raising=False)
+    with pytest.raises(RuntimeError, match="CRYSTRA_EVOLUTION_CONFIG"):
         load_configuration()
 
     path = tmp_path / "evolution.json"
     path.write_text(json.dumps(valid_configuration()))
-    monkeypatch.setenv("WSR_EVOLUTION_CONFIG", str(path))
+    monkeypatch.setenv("CRYSTRA_EVOLUTION_CONFIG", str(path))
     assert load_configuration().schema_version == "evolution.runtime@1.0.0"
+
+
+def test_crystra_runtime_environment_loads_explicit_configuration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    file = tmp_path / "evolution.json"
+    file.write_text(json.dumps(valid_configuration()))
+    monkeypatch.delenv("CRYSTRA_EVOLUTION_CONFIG", raising=False)
+    monkeypatch.setenv("CRYSTRA_EVOLUTION_CONFIG", str(file))
+    assert load_configuration().evidence_base_url == "http://evidence:4318"

@@ -6,3 +6,6 @@ __pycache__/
 dist/
 *.egg-info/
 *.pyc
+
+# Exact independent development inputs
+.crystra-inputs/

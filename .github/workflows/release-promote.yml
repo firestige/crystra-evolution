@@ -42,7 +42,7 @@ jobs:
       - name: Checkout exact publisher tooling revision
         uses: actions/checkout@v6
         with:
-          repository: firestige/wsr-evolution
+          repository: firestige/crystra-evolution
           ref: ${{ github.workflow_sha }}
           path: release-publisher
 
@@ -68,7 +68,7 @@ jobs:
             --pattern release-qualification.json --dir "$RUNNER_TEMP/qualified-release"
           QUALIFICATION="$RUNNER_TEMP/qualified-release/release-qualification.json"
           VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
-          test "$FINAL_TAG" = "$VERSION"
+          test "$FINAL_TAG" = "crystra-evolution-v$VERSION"
           python release-publisher/release/validate_image_qualification.py "$QUALIFICATION" \
             --candidate-tag "$CANDIDATE_TAG" --final-tag "$FINAL_TAG" --commit "$EXPECTED_COMMIT" \
             > "$RUNNER_TEMP/validated-qualification.json"
@@ -85,16 +85,16 @@ jobs:
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           QUALIFICATION="$RUNNER_TEMP/qualified-release/release-qualification.json"
           CANDIDATE_DIGEST="$(jq -er .ociDigest "$QUALIFICATION")"
-          docker buildx imagetools inspect "ghcr.io/firestige/wsr-evolution:$CANDIDATE_TAG" \
+          docker buildx imagetools inspect "ghcr.io/firestige/crystra-evolution:$CANDIDATE_TAG" \
             --format '{{json .Manifest}}' > "$RUNNER_TEMP/candidate-manifest.json"
           REMOTE_DIGEST="$(jq -er .digest "$RUNNER_TEMP/candidate-manifest.json")"
           test "$REMOTE_DIGEST" = "$CANDIDATE_DIGEST"
-          docker buildx imagetools inspect "ghcr.io/firestige/wsr-evolution@$CANDIDATE_DIGEST" \
+          docker buildx imagetools inspect "ghcr.io/firestige/crystra-evolution@$CANDIDATE_DIGEST" \
             --format '{{json .Image}}' > "$RUNNER_TEMP/candidate-image.json"
           jq -e '[.manifests[] | select(.platform.os == "linux") | .platform.architecture] |
             (index("amd64") != null and index("arm64") != null)' \
             "$RUNNER_TEMP/candidate-manifest.json" >/dev/null
-          docker buildx imagetools inspect "ghcr.io/firestige/wsr-evolution@$CANDIDATE_DIGEST" \
+          docker buildx imagetools inspect "ghcr.io/firestige/crystra-evolution@$CANDIDATE_DIGEST" \
             --format '{{json .Provenance}}' > "$RUNNER_TEMP/candidate-provenance.json"
           python release-publisher/release/validate_image_qualification.py "$QUALIFICATION" \
             --candidate-tag "$CANDIDATE_TAG" --final-tag "$FINAL_TAG" --commit "$EXPECTED_COMMIT" \
@@ -107,13 +107,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           CANDIDATE_DIGEST="$(jq -er .ociDigest "$RUNNER_TEMP/qualified-release/release-qualification.json")"
-          STABLE_IMAGE="ghcr.io/firestige/wsr-evolution:$FINAL_TAG"
+          STABLE_IMAGE="ghcr.io/firestige/crystra-evolution:$FINAL_TAG"
           if docker buildx imagetools inspect "$STABLE_IMAGE" --format '{{json .Manifest}}' > "$RUNNER_TEMP/stable-before.json" 2>/dev/null; then
             test "$(jq -er .digest "$RUNNER_TEMP/stable-before.json")" = "$CANDIDATE_DIGEST"
           else
             docker buildx imagetools create \
               --tag "$STABLE_IMAGE" \
-              "ghcr.io/firestige/wsr-evolution@$CANDIDATE_DIGEST"
+              "ghcr.io/firestige/crystra-evolution@$CANDIDATE_DIGEST"
           fi
           docker buildx imagetools inspect "$STABLE_IMAGE" --format '{{json .Manifest}}' > "$RUNNER_TEMP/stable-after.json"
           STABLE_DIGEST="$(jq -er .digest "$RUNNER_TEMP/stable-after.json")"
@@ -129,16 +129,16 @@ jobs:
           QUALIFICATION_SHA="sha256:$(sha256sum "$QUALIFICATION" | cut -d' ' -f1)"
           OCI_DIGEST="$(jq -er .ociDigest "$QUALIFICATION")"
           export CANDIDATE_TAG FINAL_TAG EXPECTED_COMMIT QUALIFICATION_SHA OCI_DIGEST
-          python -c 'import json,os,pathlib; q={"schemaVersion":"wsr.evolution-image-promotion@1.0.0","finalTag":os.environ["FINAL_TAG"],"promotedFrom":os.environ["CANDIDATE_TAG"],"commit":os.environ["EXPECTED_COMMIT"],"sourceQualificationSha256":os.environ["QUALIFICATION_SHA"],"image":"ghcr.io/firestige/wsr-evolution:"+os.environ["FINAL_TAG"]+"@"+os.environ["OCI_DIGEST"],"ociDigest":os.environ["OCI_DIGEST"],"validation":{"candidateDigest":"PASS","imageIdentity":"PASS","platforms":"PASS","provenance":"PASS","stableDigest":"PASS"}}; pathlib.Path(os.environ["RUNNER_TEMP"],"qualified-release","stable-qualification.json").write_text(json.dumps(q,indent=2)+"\n")'
+          python -c 'import json,os,pathlib; q={"schemaVersion":"crystra.evolution-image-promotion@1.0.0","finalTag":os.environ["FINAL_TAG"],"promotedFrom":os.environ["CANDIDATE_TAG"],"commit":os.environ["EXPECTED_COMMIT"],"sourceQualificationSha256":os.environ["QUALIFICATION_SHA"],"image":"ghcr.io/firestige/crystra-evolution:"+os.environ["FINAL_TAG"]+"@"+os.environ["OCI_DIGEST"],"ociDigest":os.environ["OCI_DIGEST"],"validation":{"candidateDigest":"PASS","imageIdentity":"PASS","platforms":"PASS","provenance":"PASS","stableDigest":"PASS"}}; pathlib.Path(os.environ["RUNNER_TEMP"],"qualified-release","stable-qualification.json").write_text(json.dumps(q,indent=2)+"\n")'
 
       - name: Mint short-lived release App token for final metadata publication
         id: release-app-token
         uses: actions/create-github-app-token@v3
         with:
-          client-id: ${{ vars.WSR_RELEASE_CLIENT_ID }}
-          private-key: ${{ secrets.WSR_RELEASE_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.CRYSTRA_RELEASE_CLIENT_ID }}
+          private-key: ${{ secrets.CRYSTRA_RELEASE_APP_PRIVATE_KEY }}
           owner: firestige
-          repositories: wsr-evolution
+          repositories: crystra-evolution
           permission-contents: write
           permission-workflows: write
 

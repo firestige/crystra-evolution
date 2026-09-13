@@ -1,6 +1,6 @@
-from wsr_evolution.calculators.operational_latency_ms import calculate as latency
-from wsr_evolution.calculators.operational_token_usage import calculate as tokens
-from wsr_evolution.domain.models import OperationalCallUnit
+from crystra_evolution.calculators.operational_latency_ms import calculate as latency
+from crystra_evolution.calculators.operational_token_usage import calculate as tokens
+from crystra_evolution.domain.models import OperationalCallUnit
 
 
 def call(
