@@ -147,7 +147,7 @@ def _descriptor(
             "workflow-package.package-release@1.0.0",
             "workflow-package.package-release@2.0.0",
         }
-        and root["tag"] == f"workflow-package/{package_name}/v{exact_version}"
+        and root["tag"] == f"crystra-workflow-package/{package_name}/v{exact_version}"
         and (
             root["schemaVersion"] == "workflow-package.package-release@2.0.0"
             or (
@@ -276,97 +276,6 @@ class GitHubWorkflowSource:
         except httpx.HTTPError as error:
             raise SourceFailure("SOURCE_UNAVAILABLE") from error
 
-    async def _fetch_historical_exact(
-        self,
-        releases: list[_Release],
-        *,
-        package_name: str,
-        exact_version: str,
-        timeout_seconds: float,
-    ) -> WorkflowCandidate:
-        matches = tuple(item for item in releases if item.tag == exact_version)
-        if not matches:
-            raise SourceFailure("NOT_FOUND")
-        if len(matches) != 1:
-            raise SourceFailure("INVALID_DESCRIPTOR")
-        selected = matches[0]
-        descriptor_asset = _one_asset(
-            selected.assets, f"workflow-package-release-{exact_version}.json"
-        )
-        if descriptor_asset is None:
-            raise SourceFailure("INVALID_DESCRIPTOR")
-        descriptor_body = await self._bytes(
-            descriptor_asset.url,
-            limit=MAX_DESCRIPTOR_BYTES,
-            timeout_seconds=timeout_seconds,
-        )
-        try:
-            value = _strict_json(descriptor_body)
-        except (ValueError, UnicodeError, json.JSONDecodeError) as error:
-            raise SourceFailure("INVALID_DESCRIPTOR") from error
-        root = _object(value, {"schemaVersion", "revision", "tag", "assets"})
-        if (
-            root is None
-            or root["schemaVersion"] != "workflow-package.release@1.0.0"
-            or root["tag"] != exact_version
-            or not isinstance(root["revision"], str)
-            or re.fullmatch(r"[a-f0-9]{40}", root["revision"]) is None
-            or not isinstance(root["assets"], list)
-        ):
-            raise SourceFailure("INVALID_DESCRIPTOR")
-        records = [
-            item
-            for item in root["assets"]
-            if isinstance(item, dict) and item.get("package") == package_name
-        ]
-        if len(records) != 1:
-            raise SourceFailure("NOT_FOUND" if not records else "INVALID_DESCRIPTOR")
-        record = _object(
-            records[0], {"name", "sha256", "bytes", "package", "version", "packageDigest"}
-        )
-        if (
-            record is None
-            or record["version"] != exact_version
-            or not isinstance(record["name"], str)
-            or record["name"] != f"workflow-package-{package_name}-{exact_version}.tar.gz"
-            or not isinstance(record["sha256"], str)
-            or re.fullmatch(r"sha256:[a-f0-9]{64}", record["sha256"]) is None
-            or not isinstance(record["packageDigest"], str)
-            or re.fullmatch(r"sha256:[a-f0-9]{64}", record["packageDigest"]) is None
-            or not isinstance(record["bytes"], int)
-            or isinstance(record["bytes"], bool)
-            or not 1 <= record["bytes"] <= MAX_ARCHIVE_BYTES
-        ):
-            raise SourceFailure("INVALID_DESCRIPTOR")
-        archive_asset = _one_asset(selected.assets, record["name"])
-        if archive_asset is None:
-            raise SourceFailure("INVALID_DESCRIPTOR")
-        try:
-            archive = await self._bytes(
-                archive_asset.url,
-                limit=MAX_ARCHIVE_BYTES,
-                timeout_seconds=timeout_seconds,
-            )
-        except ValueError as error:
-            raise SourceFailure("INVALID_ARCHIVE") from error
-        archive_digest = "sha256:" + sha256(archive).hexdigest()
-        if not archive or len(archive) != record["bytes"] or archive_digest != record["sha256"]:
-            raise SourceFailure("INVALID_ARCHIVE")
-        try:
-            candidate = await self._validator.validate(
-                archive=archive,
-                archive_digest=archive_digest,
-                package_name=package_name,
-                exact_version=exact_version,
-            )
-        except SourceFailure:
-            raise
-        except Exception as error:
-            raise SourceFailure("INVALID_WORKFLOW") from error
-        if candidate.package_digest != record["packageDigest"]:
-            raise SourceFailure("INVALID_DESCRIPTOR")
-        return candidate
-
     async def fetch_exact(
         self, *, package_name: str, exact_version: str, timeout_seconds: float
     ) -> WorkflowCandidate:
@@ -396,15 +305,10 @@ class GitHubWorkflowSource:
             if page == MAX_RELEASE_PAGES:
                 raise SourceFailure("SOURCE_UNAVAILABLE")
 
-        tag = f"workflow-package/{package_name}/v{exact_version}"
+        tag = f"crystra-workflow-package/{package_name}/v{exact_version}"
         matches = tuple(item for item in releases if item.tag == tag)
         if not matches:
-            return await self._fetch_historical_exact(
-                releases,
-                package_name=package_name,
-                exact_version=exact_version,
-                timeout_seconds=timeout_seconds,
-            )
+            raise SourceFailure("NOT_FOUND")
         if len(matches) != 1 or len(matches[0].assets) not in {3, 4}:
             raise SourceFailure("INVALID_DESCRIPTOR")
         selected = matches[0]

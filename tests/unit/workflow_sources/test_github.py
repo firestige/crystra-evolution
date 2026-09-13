@@ -72,7 +72,7 @@ async def test_github_source_fetches_exact_scoped_release_and_checks_bytes() -> 
                 200,
                 json=[
                     {
-                        "tag_name": "workflow-package/implementation/v2.0.0",
+                        "tag_name": "crystra-workflow-package/implementation/v2.0.0",
                         "draft": False,
                         "prerelease": False,
                         "assets": [
@@ -95,7 +95,7 @@ async def test_github_source_fetches_exact_scoped_release_and_checks_bytes() -> 
                 200,
                 json={
                     "schemaVersion": "workflow-package.package-release@2.0.0",
-                    "tag": "workflow-package/implementation/v2.0.0",
+                    "tag": "crystra-workflow-package/implementation/v2.0.0",
                     "package": {
                         "name": "implementation",
                         "version": "2.0.0",
@@ -160,7 +160,7 @@ async def test_github_source_maps_integrity_failures_without_leaking_response(
                 200,
                 json=[
                     {
-                        "tag_name": "workflow-package/implementation/v2.0.0",
+                        "tag_name": "crystra-workflow-package/implementation/v2.0.0",
                         "draft": False,
                         "prerelease": False,
                         "assets": [
@@ -188,7 +188,7 @@ async def test_github_source_maps_integrity_failures_without_leaking_response(
                 json={
                     "schemaVersion": "workflow-package.package-release@1.0.0",
                     "revision": "c" * 40,
-                    "tag": "workflow-package/implementation/v2.0.0",
+                    "tag": "crystra-workflow-package/implementation/v2.0.0",
                     "package": {
                         "name": "implementation",
                         "version": "2.0.0",
@@ -229,7 +229,7 @@ async def test_github_source_maps_integrity_failures_without_leaking_response(
 
 
 @pytest.mark.asyncio
-async def test_github_source_resolves_exact_historical_aggregate_release() -> None:
+async def test_github_source_rejects_historical_aggregate_release() -> None:
     archive = b"historical archive"
     archive_digest = "sha256:" + sha256(archive).hexdigest()
     archive_name = "workflow-package-implementation-0.3.0.tar.gz"
@@ -287,12 +287,13 @@ async def test_github_source_resolves_exact_historical_aggregate_release() -> No
             transport,
             validator,
         )
-        resolved = await source.fetch_exact(
-            package_name="implementation", exact_version="0.3.0", timeout_seconds=3
-        )
+        with pytest.raises(SourceFailure) as caught:
+            await source.fetch_exact(
+                package_name="implementation", exact_version="0.3.0", timeout_seconds=3
+            )
 
-    assert resolved.archive_digest == archive_digest
-    assert validator.calls == [(archive, archive_digest, "implementation", "0.3.0")]
+    assert caught.value.code == "NOT_FOUND"
+    assert validator.calls == []
 
 
 @pytest.mark.asyncio
