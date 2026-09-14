@@ -45,7 +45,10 @@ class ValidatorStub:
 
 
 @pytest.mark.asyncio
-async def test_github_source_fetches_exact_scoped_release_and_checks_bytes() -> None:
+@pytest.mark.parametrize(
+    "mode", ["scoped", "candidate", "bad-receipt", "ambiguous", "changed-descriptor"]
+)
+async def test_github_source_fetches_exact_scoped_release_and_checks_bytes(mode: str) -> None:
     archive = b"bounded workflow archive"
     archive_digest = "sha256:" + sha256(archive).hexdigest()
     archive_name = "workflow-package-implementation-2.0.0.tar.gz"
@@ -127,13 +130,101 @@ async def test_github_source_fetches_exact_scoped_release_and_checks_bytes() -> 
             return httpx.Response(200, content=archive)
         raise AssertionError(f"unexpected request {request.url}")
 
+    candidate_responses: dict[str, bytes] = {}
+
+    async def candidate_handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if url in candidate_responses:
+            return httpx.Response(200, content=candidate_responses[url])
+        response = await handler(request)
+        if mode == "scoped":
+            return response
+        if request.url.host == "api.github.com":
+            original = response.json()[0]
+            descriptor = (await handler(httpx.Request("GET", descriptor_url))).json()
+            assets = []
+            for asset in original["assets"]:
+                content = (
+                    await handler(httpx.Request("GET", asset["browser_download_url"]))
+                ).content
+                assets.append(
+                    {
+                        "name": asset["name"],
+                        "bytes": len(content),
+                        "sha256": "sha256:" + sha256(content).hexdigest(),
+                    }
+                )
+            metadata = json.dumps(
+                {
+                    "schemaVersion": "crystra.workflow-assets-release@2.0.0",
+                    "repository": "firestige/crystra-workflow-package",
+                    "revision": "c" * 40,
+                    "contract": {"repository": "firestige/crystra-contracts", "revision": "d" * 40},
+                    "packages": [
+                        {
+                            "tag": original["tag_name"],
+                            "package": descriptor["package"],
+                            "assets": assets,
+                        }
+                    ],
+                }
+            ).encode()
+            releases = []
+            for ordinal in range(1, 3 if mode == "ambiguous" else 2):
+                tag = f"crystra-workflow-package-v0.1.0-rc.{ordinal}"
+                metadata_url, qualification_url = (
+                    f"https://github.test/{ordinal}/metadata",
+                    f"https://github.test/{ordinal}/qualification",
+                )
+                qualification = {
+                    "schemaVersion": "crystra.release-qualification@1.0.0",
+                    "candidateTag": tag,
+                    "commit": "c" * 40,
+                    "artifactMetadataSha256": "sha256:" + sha256(metadata).hexdigest(),
+                    "localAcceptance": {"status": "PASS"},
+                    "remoteQualification": {"status": "PASS"},
+                }
+                if mode == "bad-receipt":
+                    qualification["commit"] = "e" * 40
+                candidate_responses[metadata_url] = metadata
+                candidate_responses[qualification_url] = json.dumps(qualification).encode()
+                releases.append(
+                    {
+                        **original,
+                        "tag_name": tag,
+                        "prerelease": True,
+                        "assets": [
+                            *original["assets"],
+                            {"name": "release-metadata.json", "browser_download_url": metadata_url},
+                            {
+                                "name": "release-qualification.json",
+                                "browser_download_url": qualification_url,
+                            },
+                        ],
+                    }
+                )
+            return httpx.Response(200, json=releases)
+        if mode == "changed-descriptor" and url == descriptor_url:
+            return httpx.Response(200, content=response.content + b" ")
+        return response
+
     validator = ValidatorStub()
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as transport:
+    async with httpx.AsyncClient(transport=httpx.MockTransport(candidate_handler)) as transport:
         source = GitHubWorkflowSource(
             WorkflowSourceConfig("official", "firestige/crystra-workflow-package"),
             transport,
             validator,
         )
+        if mode in {"bad-receipt", "ambiguous", "changed-descriptor"}:
+            with pytest.raises(SourceFailure) as failure:
+                await source.fetch_exact(
+                    package_name="implementation", exact_version="2.0.0", timeout_seconds=3.0
+                )
+            assert failure.value.code == (
+                "CHECKSUM_MISMATCH" if mode == "changed-descriptor" else "INVALID_DESCRIPTOR"
+            )
+            assert not validator.calls
+            return
         result = await source.fetch_exact(
             package_name="implementation", exact_version="2.0.0", timeout_seconds=3.0
         )

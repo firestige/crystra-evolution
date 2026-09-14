@@ -98,3 +98,5 @@ git clone https://github.com/firestige/crystra-evolution.git
 ## License
 
 [Apache-2.0](LICENSE)
+
+Exact Workflow Package resolution can consume one qualified aggregate Crystra Workflow RC when no package-scoped release exists. It verifies the candidate receipt, metadata digest, all four asset digests, and source/contract bindings before admitting the archive. Multiple matching candidates fail closed; a package-scoped release takes precedence. This enables RC combination qualification without publishing GA.
