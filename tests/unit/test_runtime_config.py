@@ -96,3 +96,44 @@ def test_crystra_runtime_environment_loads_explicit_configuration(
     monkeypatch.delenv("CRYSTRA_EVOLUTION_CONFIG", raising=False)
     monkeypatch.setenv("CRYSTRA_EVOLUTION_CONFIG", str(file))
     assert load_configuration().evidence_base_url == "http://evidence:4318"
+
+
+@pytest.mark.asyncio
+async def test_production_workflow_transport_reads_redirected_release_assets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import httpx
+
+    from crystra_evolution.runtime import build_app
+
+    original = httpx.AsyncClient
+    clients: list[httpx.AsyncClient] = []
+    requests: list[str] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(str(request.url))
+        if request.url.host == "github.com":
+            return httpx.Response(
+                302, headers={"location": "https://release-assets.githubusercontent.com/asset"}
+            )
+        return httpx.Response(200, content=b"qualified archive bytes")
+
+    def client(**kwargs: object) -> httpx.AsyncClient:
+        result = original(transport=httpx.MockTransport(respond), **kwargs)  # type: ignore[arg-type]
+        clients.append(result)
+        return result
+
+    monkeypatch.setattr(httpx, "AsyncClient", client)
+    build_app(RuntimeConfiguration.model_validate(valid_configuration()))
+    try:
+        response = await clients[1].get(
+            "https://github.com/firestige/crystra-workflow-package/releases/download/candidate/asset"
+        )
+        assert response.status_code == 200
+        assert response.content == b"qualified archive bytes"
+        assert len(requests) == 2
+        # Evidence is an exact internal origin, so its redirect policy stays closed.
+        assert clients[0].follow_redirects is False
+    finally:
+        for transport in clients:
+            await transport.aclose()
