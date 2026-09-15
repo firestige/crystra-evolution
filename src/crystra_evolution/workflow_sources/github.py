@@ -44,6 +44,8 @@ class _Release:
     tag: str
     draft: bool
     assets: tuple[_Asset, ...]
+    prerelease: bool = False
+    qualification: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,7 +95,12 @@ def _release(value: object) -> _Release | None:
         if url is None:
             return None
         parsed_assets.append(_Asset(item["name"], url))
-    return _Release(tag=tag, draft=draft, assets=tuple(parsed_assets))
+    return _Release(
+        tag=tag,
+        draft=draft,
+        assets=tuple(parsed_assets),
+        prerelease=value.get("prerelease") is True,
+    )
 
 
 def _one_asset(assets: tuple[_Asset, ...], name: str) -> _Asset | None:
@@ -238,6 +245,24 @@ def _valid_provenance(
     )
 
 
+def _verify_candidate_asset(release: _Release, asset: _Asset, body: bytes) -> None:
+    q = release.qualification
+    if q is None:
+        return
+    if q["assets"].get(asset.name) != "sha256:" + sha256(body).hexdigest():
+        raise SourceFailure("CHECKSUM_MISMATCH")
+    if asset.name.endswith(".provenance.json"):
+        try:
+            provenance = _strict_json(body)
+            if (
+                provenance["source"]["revision"] != q["revision"]
+                or provenance["contract"]["revision"] != q["contractRevision"]
+            ):
+                raise ValueError("candidate source binding mismatch")
+        except (ValueError, KeyError, TypeError) as error:
+            raise SourceFailure("INVALID_DESCRIPTOR") from error
+
+
 class GitHubWorkflowSource:
     def __init__(
         self,
@@ -276,6 +301,109 @@ class GitHubWorkflowSource:
         except httpx.HTTPError as error:
             raise SourceFailure("SOURCE_UNAVAILABLE") from error
 
+    async def _aggregate_release(
+        self, item: _Release, package_name: str, exact_version: str, timeout_seconds: float
+    ) -> _Release | None:
+        if (
+            not item.prerelease
+            or re.fullmatch(r"crystra-workflow-package-v\d+\.\d+\.\d+-rc\.[1-9]\d*", item.tag)
+            is None
+        ):
+            return None
+        manifest_asset = _one_asset(item.assets, "release-metadata.json")
+        receipt_asset = _one_asset(item.assets, "release-qualification.json")
+        if manifest_asset is None or receipt_asset is None:
+            raise SourceFailure("INVALID_DESCRIPTOR")
+        try:
+            raw = await self._bytes(
+                manifest_asset.url,
+                limit=MAX_RELEASE_RESPONSE_BYTES,
+                timeout_seconds=timeout_seconds,
+            )
+            receipt = _strict_json(
+                await self._bytes(
+                    receipt_asset.url, limit=MAX_DESCRIPTOR_BYTES, timeout_seconds=timeout_seconds
+                )
+            )
+            manifest = _strict_json(raw)
+            if not isinstance(manifest, dict) or not isinstance(receipt, dict):
+                raise ValueError("candidate objects required")
+            revision = manifest.get("revision")
+            contract = manifest.get("contract")
+            if (
+                manifest.get("schemaVersion") != "crystra.workflow-assets-release@2.0.0"
+                or manifest.get("repository") != self._configuration.repository
+                or not isinstance(revision, str)
+                or re.fullmatch(r"[a-f0-9]{40}", revision) is None
+                or not isinstance(contract, dict)
+                or contract.get("repository") != "firestige/crystra-contracts"
+                or not isinstance(contract.get("revision"), str)
+                or re.fullmatch(r"[a-f0-9]{40}", contract["revision"]) is None
+                or receipt.get("schemaVersion") != "crystra.release-qualification@1.0.0"
+                or receipt.get("candidateTag") != item.tag
+                or receipt.get("commit") != revision
+                or receipt.get("artifactMetadataSha256") != "sha256:" + sha256(raw).hexdigest()
+                or receipt.get("localAcceptance") != {"status": "PASS"}
+                or receipt.get("remoteQualification") != {"status": "PASS"}
+            ):
+                raise ValueError("candidate qualification mismatch")
+            packages = manifest.get("packages")
+            if not isinstance(packages, list):
+                raise ValueError("candidate packages required")
+            matches = [
+                p
+                for p in packages
+                if isinstance(p, dict)
+                and isinstance(p.get("package"), dict)
+                and p["package"].get("name") == package_name
+                and p["package"].get("version") == exact_version
+            ]
+            if not matches:
+                return None
+            tag = f"crystra-workflow-package/{package_name}/v{exact_version}"
+            if len(matches) != 1 or matches[0].get("tag") != tag:
+                raise ValueError("ambiguous candidate package")
+            selected = matches[0]
+            assets = selected.get("assets")
+            package_digest = selected["package"].get("digest")
+            if (
+                not isinstance(assets, list)
+                or len(assets) != 4
+                or not isinstance(package_digest, str)
+                or re.fullmatch(r"sha256:[a-f0-9]{64}", package_digest) is None
+            ):
+                raise ValueError("invalid candidate asset set")
+            subset = []
+            digests = {}
+            for value in assets:
+                if (
+                    not isinstance(value, dict)
+                    or not isinstance(value.get("name"), str)
+                    or not isinstance(value.get("sha256"), str)
+                    or re.fullmatch(r"sha256:[a-f0-9]{64}", value["sha256"]) is None
+                    or value["name"] in digests
+                ):
+                    raise ValueError("invalid candidate asset")
+                found = _one_asset(item.assets, value["name"])
+                if found is None:
+                    raise ValueError("missing candidate asset")
+                subset.append(found)
+                digests[value["name"]] = value["sha256"]
+            return _Release(
+                tag=tag,
+                draft=False,
+                assets=tuple(subset),
+                prerelease=True,
+                qualification={
+                    "revision": revision,
+                    "contractRevision": contract["revision"],
+                    "packageDigest": package_digest,
+                    "assets": digests,
+                },
+            )
+        except (ValueError, TypeError, KeyError) as error:
+            raise SourceFailure("INVALID_DESCRIPTOR") from error
+
     async def fetch_exact(
         self, *, package_name: str, exact_version: str, timeout_seconds: float
     ) -> WorkflowCandidate:
@@ -308,6 +436,15 @@ class GitHubWorkflowSource:
         tag = f"crystra-workflow-package/{package_name}/v{exact_version}"
         matches = tuple(item for item in releases if item.tag == tag)
         if not matches:
+            candidates = []
+            for item in releases:
+                candidate_release = await self._aggregate_release(
+                    item, package_name, exact_version, timeout_seconds
+                )
+                if candidate_release is not None:
+                    candidates.append(candidate_release)
+            matches = tuple(candidates)
+        if not matches:
             raise SourceFailure("NOT_FOUND")
         if len(matches) != 1 or len(matches[0].assets) not in {3, 4}:
             raise SourceFailure("INVALID_DESCRIPTOR")
@@ -332,6 +469,7 @@ class GitHubWorkflowSource:
             )
         except ValueError as error:
             raise SourceFailure("INVALID_DESCRIPTOR") from error
+        _verify_candidate_asset(selected, descriptor_asset, descriptor_body)
         metadata = _descriptor(
             descriptor_body,
             package_name=package_name,
@@ -341,6 +479,11 @@ class GitHubWorkflowSource:
             provenance_name=provenance_asset.name if provenance_asset is not None else None,
         )
         if metadata is None:
+            raise SourceFailure("INVALID_DESCRIPTOR")
+        if (
+            selected.qualification is not None
+            and metadata.package_digest != selected.qualification["packageDigest"]
+        ):
             raise SourceFailure("INVALID_DESCRIPTOR")
         if metadata.provenance_name is not None:
             if (
@@ -357,6 +500,7 @@ class GitHubWorkflowSource:
                 )
             except ValueError as error:
                 raise SourceFailure("INVALID_DESCRIPTOR") from error
+            _verify_candidate_asset(selected, provenance_asset, provenance_body)
             actual_provenance_digest = "sha256:" + sha256(provenance_body).hexdigest()
             if actual_provenance_digest != metadata.provenance_digest:
                 raise SourceFailure("CHECKSUM_MISMATCH")
@@ -374,6 +518,7 @@ class GitHubWorkflowSource:
             )
         except ValueError as error:
             raise SourceFailure("CHECKSUM_MISMATCH") from error
+        _verify_candidate_asset(selected, checksum_asset, checksum)
         expected_checksum = f"{metadata.archive_digest[7:]}  {archive_name}\n".encode()
         if checksum != expected_checksum:
             raise SourceFailure("CHECKSUM_MISMATCH")
@@ -385,6 +530,7 @@ class GitHubWorkflowSource:
             )
         except ValueError as error:
             raise SourceFailure("INVALID_ARCHIVE") from error
+        _verify_candidate_asset(selected, archive_asset, archive)
         actual_digest = "sha256:" + sha256(archive).hexdigest()
         if (
             not archive

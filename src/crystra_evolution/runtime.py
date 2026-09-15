@@ -103,7 +103,8 @@ def build_app(configuration: RuntimeConfiguration) -> FastAPI:
         base_url=configuration.evidence_base_url.rstrip("/"), timeout=15
     )
     source_transport = httpx.AsyncClient(
-        headers={"accept": "application/vnd.github+json", "user-agent": "crystra-evolution/0.1.0"}
+        headers={"accept": "application/vnd.github+json", "user-agent": "crystra-evolution/0.1.0"},
+        follow_redirects=True,
     )
     evidence = EvidenceHttpClient(evidence_transport)
     source_configuration = tuple(
